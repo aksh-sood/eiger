@@ -98,8 +98,10 @@ def _looks_like_injection(text: str) -> bool:
 
 
 def assemble_rag(settings: Settings, query: str, chunks: list[Chunk]) -> tuple[list[dict], list[Chunk]]:
+    # Split by source. Fail closed: only an explicit "trusted" label earns trust;
+    # any other or unknown provenance is treated as untrusted user content.
     trusted = [c for c in chunks if c.provenance == "trusted"]
-    user = [c for c in chunks if c.provenance == "user"]
+    user = [c for c in chunks if c.provenance != "trusted"]
     if settings.sec_rag_provenance:
         safe_user = [c for c in user if not _looks_like_injection(c.text)]
         trusted_block = "\n".join(c.text for c in trusted)

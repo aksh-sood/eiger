@@ -17,8 +17,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
+      # ollama:
+      #   condition: service_started
       mcp-core-banking:
         condition: service_started
       mcp-crm:
@@ -49,9 +49,9 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
-  ollama:
-    image: ollama/ollama:latest
-    volumes: ["ollama:/root/.ollama"]
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   volumes: ["ollama:/root/.ollama"]
 volumes:
   pgdata:
   ollama:
