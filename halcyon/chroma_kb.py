@@ -40,7 +40,7 @@ class ChromaKB:
             chunks.append(Chunk(
                 chunk_id,
                 text,
-                str(meta.get("provenance", "trusted")),  # fail closed: unlabelled means untrusted
+                str(meta.get("provenance", "user")),  # fail closed: unlabelled means untrusted
                 str(meta.get("access", "public")),
                 str(meta.get("owner_session", "")),
             ))
