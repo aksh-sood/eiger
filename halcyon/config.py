@@ -21,6 +21,7 @@ class Settings:
     sec_input_filter: bool
     sec_output_encoding: bool
     sec_rag_provenance: bool
+    sec_rag_question_judge: bool
     sec_artifact_verification: bool
     sec_tool_scope_enforcement: bool
     sec_mcp_desc_pinning: bool
@@ -48,6 +49,8 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         sec_input_filter=_flag(env, "SEC_INPUT_FILTER", secure),
         sec_output_encoding=_flag(env, "SEC_OUTPUT_ENCODING", secure),
         sec_rag_provenance=_flag(env, "SEC_RAG_PROVENANCE", secure),
+        # Opt-in in both modes: it costs an extra model call per question.
+        sec_rag_question_judge=_flag(env, "SEC_RAG_QUESTION_JUDGE", False),
         sec_artifact_verification=_flag(env, "SEC_ARTIFACT_VERIFICATION", secure),
         sec_tool_scope_enforcement=_flag(env, "SEC_TOOL_SCOPE_ENFORCEMENT", secure),
         sec_mcp_desc_pinning=_flag(env, "SEC_MCP_DESC_PINNING", secure),
