@@ -22,6 +22,11 @@ class Settings:
     sec_output_encoding: bool
     sec_rag_provenance: bool
     sec_rag_question_judge: bool
+    sec_rag_question_judge_backend: str
+    sec_rag_jev_notes: bool
+    sec_rag_jev_chunks: bool
+    sec_rag_jev_reply: bool
+    sec_rag_jev_threshold: float
     sec_artifact_verification: bool
     sec_tool_scope_enforcement: bool
     sec_mcp_desc_pinning: bool
@@ -43,6 +48,14 @@ def load_settings(env: Mapping[str, str]) -> Settings:
             f"HALCYON_MODE must be 'vulnerable' or 'secure', got {mode!r}"
         )
     secure = mode == "secure"
+    judge_backend = env.get("SEC_RAG_QUESTION_JUDGE_BACKEND", "llm").strip().lower()
+    if judge_backend not in ("llm", "jev"):
+        raise ValueError(
+            f"SEC_RAG_QUESTION_JUDGE_BACKEND must be 'llm' or 'jev', got {judge_backend!r}"
+        )
+    jev_threshold = float(env.get("SEC_RAG_JEV_THRESHOLD", "0.5"))
+    if not 0 < jev_threshold <= 1:
+        raise ValueError(f"SEC_RAG_JEV_THRESHOLD must be in (0, 1], got {jev_threshold!r}")
     return Settings(
         mode=mode,
         sec_system_prompt_hardening=_flag(env, "SEC_SYSTEM_PROMPT_HARDENING", secure),
@@ -51,6 +64,12 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         sec_rag_provenance=_flag(env, "SEC_RAG_PROVENANCE", secure),
         # Opt-in in both modes: it costs an extra model call per question.
         sec_rag_question_judge=_flag(env, "SEC_RAG_QUESTION_JUDGE", False),
+        sec_rag_question_judge_backend=judge_backend,
+        # JEV screens: opt-in in both modes. Each costs a call and sends text to a third party.
+        sec_rag_jev_notes=_flag(env, "SEC_RAG_JEV_NOTES", False),
+        sec_rag_jev_chunks=_flag(env, "SEC_RAG_JEV_CHUNKS", False),
+        sec_rag_jev_reply=_flag(env, "SEC_RAG_JEV_REPLY", False),
+        sec_rag_jev_threshold=jev_threshold,
         sec_artifact_verification=_flag(env, "SEC_ARTIFACT_VERIFICATION", secure),
         sec_tool_scope_enforcement=_flag(env, "SEC_TOOL_SCOPE_ENFORCEMENT", secure),
         sec_mcp_desc_pinning=_flag(env, "SEC_MCP_DESC_PINNING", secure),

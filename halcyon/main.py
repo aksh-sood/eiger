@@ -1,7 +1,7 @@
 import logging
 import os
 
-from halcyon import bank_fixtures, crm_fixtures, kb_fixtures, treasury_corpus
+from halcyon import bank_fixtures, crm_fixtures, jev, kb_fixtures, treasury_corpus
 from halcyon.chroma_kb import ChromaKB
 from halcyon.config import load_settings
 from halcyon.llm import build_llm, build_tool_llm
@@ -66,4 +66,5 @@ app = create_app(
     _store, _settings, _factory, _kb_for, _bank_for, _tool_llm_factory, _mcp_host_factory,
     treasury_for=_treasury_for,
     treasury_kb_for=_treasury_kb_for,
+    jev=jev.from_env(os.environ),  # None unless OPENROUTER_API_KEY is set
 )

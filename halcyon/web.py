@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
@@ -18,6 +18,7 @@ from halcyon import (
 )
 from halcyon.bank import Bank
 from halcyon.config import MODULE_FLAGS, Settings, effective_settings
+from halcyon.jev import Jev
 from halcyon.kb import KnowledgeBase
 from halcyon.session_state import InMemorySessionState, SessionState
 from halcyon.llm import LLM, OllamaProvider, ToolLLM
@@ -150,6 +151,7 @@ def create_app(
     session_state: SessionState | None = None,
     treasury_for: TreasuryProvider | None = None,
     treasury_kb_for: Callable[[str], KnowledgeBase] | None = None,
+    jev: Jev | None = None,
 ) -> FastAPI:
     if settings.expose_openapi:
         app = FastAPI(title="Eiger")
@@ -368,8 +370,10 @@ def create_app(
 
     @app.post("/api/kb")
     def add_kb(body: KbIn) -> dict:
+        eff = effective_settings(settings, sess, body.session_id, "m3")
         kb = kb_for(body.session_id)
-        kb.add(body.text, "user", owner_session=body.session_id)
+        if not rag.add_note(kb, jev, store, eff, body.session_id, body.text):
+            raise HTTPException(status_code=422, detail="Note rejected by content screen.")
         return {"status": "ok"}
 
     @app.post("/api/ask")
@@ -377,7 +381,8 @@ def create_app(
         eff = effective_settings(settings, sess, body.session_id, "m3")
         kb = kb_for(body.session_id)
         reply, _ = rag.answer(
-            kb, llm_factory(*_mcfg(body.session_id)), store, eff, body.session_id, body.query
+            kb, llm_factory(*_mcfg(body.session_id)), store, eff, body.session_id, body.query,
+            jev=jev,
         )
         return {"reply": reply}
 

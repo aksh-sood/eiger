@@ -10,6 +10,15 @@ services:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       DEFAULT_PROVIDER: local
+      # M3 optional layers, all off by default. The OpenRouter key is used only by JEV;
+      # put it in .env (gitignored), never in this file.
+      SEC_RAG_QUESTION_JUDGE: ${SEC_RAG_QUESTION_JUDGE:-off}
+      SEC_RAG_QUESTION_JUDGE_BACKEND: ${SEC_RAG_QUESTION_JUDGE_BACKEND:-llm}
+      SEC_RAG_JEV_NOTES: ${SEC_RAG_JEV_NOTES:-off}
+      SEC_RAG_JEV_CHUNKS: ${SEC_RAG_JEV_CHUNKS:-off}
+      SEC_RAG_JEV_REPLY: ${SEC_RAG_JEV_REPLY:-off}
+      SEC_RAG_JEV_THRESHOLD: ${SEC_RAG_JEV_THRESHOLD:-0.5}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       # MCP servers are discovered from mcp.json (baked into the image). Uncomment to
       # override per server, e.g. to point at externally-hosted MCP endpoints:
       # MCP_CORE_URL: http://mcp-core-banking:9001/mcp

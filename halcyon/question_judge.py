@@ -13,7 +13,9 @@ import re
 import secrets
 from dataclasses import dataclass
 
+from halcyon import jev as jev_screen
 from halcyon.guards import _RESERVED_LABELS, _neutralise_note
+from halcyon.jev import Jev
 from halcyon.llm import LLM
 
 MALICIOUS_MESSAGE = "Malicious message detected."
@@ -70,3 +72,15 @@ def judge_question(llm: LLM, query: str) -> JudgeResult:
     if not _refined_ok(refined, token):
         return _BLOCKED
     return JudgeResult(True, refined)
+
+
+def jev_judge_question(jev: Jev | None, query: str, threshold: float) -> JudgeResult:
+    """JEV backend: a yes/no probability and no rewrite, since JEV cannot write text.
+
+    An allowed question goes on as the original, with reserved labels removed in code,
+    which keeps the guarantee _refined_ok gives the LLM backend.
+    """
+    if jev_screen.flagged(jev, threshold, jev_screen.QUESTION_QUESTION,
+                          jev_screen.QUESTION_CRITERIA, query):
+        return _BLOCKED
+    return JudgeResult(True, _neutralise_note(query))
