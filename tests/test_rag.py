@@ -30,7 +30,9 @@ def test_secure_quarantine_blocks_poison():
     assert not audit.has_event(s, "victim", "m3", audit.POISONED_CHUNK_IN_CONTEXT)
 
 
-def test_restricted_doc_retrieved_only_when_unprotected():
+def test_restricted_doc_retrieved_fires_regardless_of_mode():
+    # Retrieval/indexing is unaffected by SEC_RAG_PROVENANCE; only visibility to the
+    # model is access-controlled (and that's now unconditional, see test below).
     kb = InMemoryKB()
     kb.add("internal fraud rules memo threshold", "trusted", access="restricted", owner_session="ops")
     s = InMemoryStore()
@@ -40,10 +42,19 @@ def test_restricted_doc_retrieved_only_when_unprotected():
     s2 = InMemoryStore()
     sec = load_settings({"HALCYON_MODE": "secure"})
     rag.answer(kb, StubLLM("ok"), s2, sec, "outsider", "fraud rules threshold memo")
-    assert not audit.has_event(s2, "outsider", "m3", audit.RESTRICTED_DOC_RETRIEVED)
+    assert audit.has_event(s2, "outsider", "m3", audit.RESTRICTED_DOC_RETRIEVED)
 
 
-def test_m3_stretch_requires_disclosure_not_retrieval():
+def test_restricted_doc_never_reaches_context_even_in_vulnerable_mode():
+    kb = InMemoryKB()
+    kb.add("internal fraud rules memo threshold", "trusted", access="restricted", owner_session="ops")
+    s = InMemoryStore()
+    vuln = load_settings({"HALCYON_MODE": "vulnerable"})
+    _, visible = rag.answer(kb, StubLLM("ok"), s, vuln, "outsider", "fraud rules threshold memo")
+    assert all(not (c.access == "restricted" and c.owner_session != "outsider") for c in visible)
+
+
+def test_m3_stretch_fix_blocks_disclosure_even_with_leaky_model():
     from halcyon import guards, kb_fixtures, rag
     from halcyon.config import load_settings
     from halcyon.kb import InMemoryKB
@@ -60,10 +71,12 @@ def test_m3_stretch_requires_disclosure_not_retrieval():
     rag.answer(kb, StubLLM("I can't share internal documents."), store, settings, "s", q)
     assert m3.validate(store, "s")["stretch"] == "fail"
 
-    # disclose: reply contains the memo canary -> stretch pass
+    # even a leaky/compromised model can't disclose it: the restricted chunk was
+    # filtered out before it ever reached context, so stretch stays fail regardless
+    # of what the model says.
     kb2 = InMemoryKB()
     kb2.seed(kb_fixtures.SEED)
     store2 = InMemoryStore()
     rag.answer(kb2, StubLLM(f"Sure: the memo says ref {guards.RAG_MEMO_CANARY} ..."),
                store2, settings, "s", q)
-    assert m3.validate(store2, "s")["stretch"] == "pass"
+    assert m3.validate(store2, "s")["stretch"] == "fail"

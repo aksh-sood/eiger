@@ -38,15 +38,14 @@ def answer(kb: KnowledgeBase, llm: LLM, store: Store, settings: Settings,
             return verdict.text, []
         query = verdict.text  # the refined (or label-stripped) question from here on
     chunks = kb.retrieve(query, session_id, k=3)
-    if settings.sec_rag_provenance:
-        visible = [c for c in chunks
-                   if c.access != "restricted" or c.owner_session == session_id]
-    else:
-        visible = chunks
-    for c in visible:
+    for c in chunks:
         if c.access == "restricted" and c.owner_session != session_id:
             audit.record(store, session_id, module, audit.RESTRICTED_DOC_RETRIEVED,
                          session_id, {"chunk": c.id})
+    # Access control is unconditional, independent of SEC_RAG_PROVENANCE: a restricted
+    # chunk owned by another session never reaches the model, in any mode. Fail closed.
+    visible = [c for c in chunks
+               if c.access != "restricted" or c.owner_session == session_id]
     if settings.sec_rag_jev_chunks:
         # JEV layer 2: drop untrusted chunks that read as instructions. Trusted chunks
         # are never sent to JEV. Same fail-closed split as guards: only "trusted" is trusted.
